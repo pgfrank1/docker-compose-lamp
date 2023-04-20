@@ -1,41 +1,103 @@
 <?php
-require_once("./ITaskManager.php");
 
-class TaskManager implements ITaskManager {
-    private $db;
+require_once "./ITaskManager.php";
 
-    public function __construct($host, $dbname, $username, $password) {
-        $dsn = "mysql:host=$host;dbname=$dbname";
-        $this->db = new PDO($dsn, $username, $password);
+class TaskManager implements ITaskManager
+{
+    private PDO $pdo;
+
+    public function __construct()
+    {
+        $this->pdo = $this->db_connect();
     }
 
-    public function create($desc) {
-        $stmt = $this->db->prepare("INSERT INTO Project4.Task (description) VALUES (:desc)");
-        $stmt->bindParam(':desc', $desc);
-        return $stmt->execute();
+    public function create($desc): false|string|null
+    {
+        $return_value= NULL;
+        try {
+            $stmt = $this->pdo->prepare("INSERT INTO Task (description) VALUES (:desc)");
+            $stmt->execute(array(":desc"=>$desc));
+            $return_value = $this->pdo->lastInsertId();
+        } catch (Exception $e)
+        {
+            echo "{$e->getMessage()}<br/>\n";
+        }
+        return $return_value;
     }
 
-    public function read($id) {
-        $stmt = $this->db->prepare("SELECT * FROM Project4.Task WHERE id=:id");
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public function read($id): false|string|null
+    {
+        $return_value= NULL;
+        try {
+            $stmt = $this->pdo->prepare("SELECT * FROM Task WHERE id = :id");
+            $stmt->execute(array(":id"=>$id));
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $return_value = json_encode($results, JSON_PRETTY_PRINT);
+        } catch (Exception $e)
+        {
+            echo "{$e->getMessage()}<br/>\n";
+        }
+        return $return_value;
     }
 
-    public function readAll() {
-        return $this->db->query("SELECT * FROM Project4.Task")->fetchAll(PDO::FETCH_ASSOC);
+    public function readAll(): false|string|null
+    {
+        $return_value= NULL;
+        try
+        {
+            $stmt = $this->pdo->prepare("SELECT * FROM Task");
+            $stmt->execute();
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $return_value = json_encode($results);
+
+        } catch (Exception $e)
+        {
+            echo "{$e->getMessage()}<br/>\n";
+        }
+        return $return_value;
     }
 
-    public function update($id, $newDesc) {
-        $stmt = $this->db->prepare("UPDATE Project4.Task SET description=:newDesc WHERE id=:id");
-        $stmt->bindParam(':newDesc', $newDesc);
-        $stmt->bindParam(':id', $id);
-        return $stmt->execute();
+    public function update($id, $newDesc): ?int
+    {
+        $return_value= NULL;
+        try {
+            $stmt = $this->pdo->prepare("UPDATE Task SET description = :newDesc WHERE id = :id");
+            $stmt->execute(array(":id"=>$id, ":newDesc"=>$newDesc));
+            $return_value = $stmt->rowCount();
+        } catch (Exception $e)
+        {
+            echo "{$e->getMessage()}<br/>\n";
+        }
+        return $return_value;
     }
 
-    public function delete($id) {
-        $stmt = $this->db->prepare("DELETE FROM Project4.Task WHERE id=:id");
-        $stmt->bindParam(':id', $id);
-        return $stmt->execute();
+    public function delete($id): ?int
+    {
+        $return_value= NULL;
+        try {
+            $stmt = $this->pdo->prepare("DELETE FROM Task WHERE id = :id");
+            $stmt->execute(array(":id"=>$id));
+            $return_value = $stmt->rowCount();
+        } catch (Exception $e)
+        {
+            echo "{$e->getMessage()}<br/>\n";
+        }
+        return $return_value;
+    }
+    public function db_connect(): PDO {
+        //TODO: CHANGE THIS DEPENDING ON ENVIRONMENT
+        $host = 'database';
+        $db_name = 'Project4';
+        $db_user = 'root';
+        $db_password = 'student';
+/*      $host = '127.0.0.1';
+        $db_name = 'PROJECT4';
+        $db_user = 'student';
+        $db_password = 'student';*/
+        $db = "mysql:host=$host;dbname=$db_name;charset=utf8mb4";
+        $options = array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION);
+        return new PDO($db, $db_user, $db_password, $options);
     }
 }
